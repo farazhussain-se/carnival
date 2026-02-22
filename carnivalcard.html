@@ -4,17 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Digital Crew Card - Carnival</title>
-    
-    <!-- 1. React & Babel (Core Engine) -->
+
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    
-    <!-- 2. Robust QR Code Library (Vanilla JS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-    <!-- 3. Tailwind CSS (Styling) -->
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -22,191 +18,165 @@
                     colors: {
                         carnivalRed: '#E31837',
                         carnivalBlue: '#0033A0',
-                        carnivalDarkBlue: '#00205B'
-                    },
-                    boxShadow: {
-                        'card': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                        carnivalDark: '#00205B'
                     }
                 }
             }
         }
     </script>
-    
-   <style>
-    /* Remove html/body height definitions to let the iframe measure the true height of the card */
-    body { 
-        background-color: transparent; 
-        margin: 0; 
-        padding: 10px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        overflow: hidden; /* Prevent internal scrollbars */
-    }
-    .animated-pulse { animation: pulse-ring 2s infinite; }
-    @keyframes pulse-ring {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
-    }
-</style>
+
+    <style>
+        /* --- SCROLL FIX: No height definitions anywhere --- */
+        * { box-sizing: border-box; }
+        html {
+            overflow: hidden;
+            height: auto;
+        }
+        body {
+            margin: 0;
+            padding: 10px;
+            overflow: hidden;
+            height: auto;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        #root {
+            overflow: hidden;
+            height: auto;
+        }
+        @keyframes pulse-ring {
+            0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74,222,128,0.7); }
+            70%  { transform: scale(1);    box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+        }
+        .pulse { border-radius: 50%; animation: pulse-ring 2s infinite; }
+    </style>
 </head>
 <body>
+    <div id="root">Loading...</div>
 
-    <!-- Mount Point with Fallback Text -->
-    <div id="root" class="flex items-center justify-center h-screen text-gray-500 text-sm">
-        Loading Digital Badge...
-    </div>
-
-    <!-- The React Application -->
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
         const CrewBadge = () => {
-            const [user, setUser] = useState({
-                id: 'Loading...',
-                firstName: 'Crew',
-                lastName: 'Member',
-                role: 'Staff',
-                ship: 'Carnival Mardi Gras'
-            });
-
-            const [timeString, setTimeString] = useState("");
             const qrRef = useRef(null);
-            
-            // 1. Live Clock
+            const [timeString, setTimeString] = useState('');
+            const [qrReady, setQrReady] = useState(false);
+
+            // --- HARDCODED USER ---
+            const user = {
+                id:         "CRW-84920",
+                firstName:  "Sarah",
+                lastName:   "Jenkins",
+                role:       "Guest Experience Manager",
+                ship:       "Carnival Celebration"
+            };
+
+            // Live clock
             useEffect(() => {
-                const updateTime = () => {
+                const tick = () => {
                     const now = new Date();
-                    setTimeString(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+                    setTimeString(now.toLocaleTimeString([], {
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                    }));
                 };
-                updateTime(); // Initial run
-                const timer = setInterval(updateTime, 1000);
-                return () => clearInterval(timer);
+                tick();
+                const t = setInterval(tick, 1000);
+                return () => clearInterval(t);
             }, []);
 
-            // 2. Fetch User Data (Staffbase Injection)
+            // QR code (generate once, no re-renders)
             useEffect(() => {
-                const body = document.body;
-                
-                // Read data attributes injected by Staffbase
-                const embeddedId = body.getAttribute('data-user-id') || "CRW-84920";
-                const embeddedFirstName = body.getAttribute('data-first-name') || "Alex";
-                const embeddedLastName = body.getAttribute('data-last-name') || "Smith";
-                const embeddedRole = body.getAttribute('data-role') || "Marine Operations";
-                
-                setUser({
-                    id: embeddedId,
-                    firstName: embeddedFirstName,
-                    lastName: embeddedLastName,
-                    role: embeddedRole,
-                    ship: "Carnival Celebration"
-                });
-            }, []);
-
-            // 3. Generate QR Code (Vanilla JS Wrapper)
-            useEffect(() => {
-                if (qrRef.current && user.id !== 'Loading...') {
-                    // Clear previous QR
-                    qrRef.current.innerHTML = "";
-                    
-                    // Generate new QR
-                    try {
-                        new QRCode(qrRef.current, {
-                            text: JSON.stringify({ uid: user.id, ts: Date.now() }),
-                            width: 160,
-                            height: 160,
-                            colorDark : "#00205B",
-                            colorLight : "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.H
-                        });
-                    } catch (e) {
-                        console.error("QR Generation failed", e);
-                        qrRef.current.innerText = "QR Error";
-                    }
+                if (qrRef.current && !qrReady) {
+                    qrRef.current.innerHTML = '';
+                    new QRCode(qrRef.current, {
+                        text: `UID:${user.id}|NAME:${user.firstName} ${user.lastName}`,
+                        width: 150,
+                        height: 150,
+                        colorDark: '#00205B',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    setQrReady(true);
                 }
-            }, [user.id]);
+            }, []);
 
             return (
-                <div className="w-full max-w-sm mx-auto flex flex-col items-center">
-                    
-                    {/* CARD CONTAINER */}
-                    <div className="bg-white rounded-2xl shadow-card overflow-hidden border border-gray-100 w-full relative">
-                        
-                        {/* Security Header */}
-                        <div className="bg-carnivalDarkBlue text-white px-4 py-2 flex justify-between items-center text-xs font-semibold">
-                            <span className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-green-400 animated-pulse"></span>
+                <div className="w-full max-w-sm mx-auto">
+                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
+                         style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}>
+
+                        {/* ── Security Header ── */}
+                        <div className="bg-carnivalDark px-4 py-2 flex justify-between items-center">
+                            <span className="flex items-center gap-2 text-white text-xs font-semibold">
+                                <span className="pulse w-2.5 h-2.5 bg-green-400 inline-block"></span>
                                 Active Status
                             </span>
-                            <span className="font-mono opacity-90">{timeString}</span>
+                            <span className="text-white text-xs font-mono opacity-90">{timeString}</span>
                         </div>
 
-                        {/* Profile Section */}
-                        <div className="p-6 flex flex-col items-center border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
-                            
-                            {/* Logo */}
-                            <img 
-                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Carnival_Cruise_Line_logo.svg/2560px-Carnival_Cruise_Line_logo.svg.png" 
-                                alt="Carnival Logo" 
-                                className="h-12 object-contain mb-4"
+                        {/* ── Profile ── */}
+                        <div className="flex flex-col items-center pt-5 pb-4 px-4 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+                            <img
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Carnival_Cruise_Line_logo.svg/2560px-Carnival_Cruise_Line_logo.svg.png"
+                                alt="Carnival"
+                                style={{ height: '36px', objectFit: 'contain', marginBottom: '12px' }}
                             />
-
-                            <h1 className="text-2xl font-bold text-gray-900 text-center uppercase tracking-tight">
+                            <p className="text-2xl font-bold text-gray-900 uppercase tracking-tight text-center m-0">
                                 {user.firstName} {user.lastName}
-                            </h1>
-                            <p className="text-xs font-bold text-carnivalBlue uppercase tracking-widest mt-1 mb-1">
+                            </p>
+                            <p className="text-xs font-bold text-carnivalBlue uppercase tracking-widest mt-1 mb-0.5 text-center">
                                 {user.role}
                             </p>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide text-center m-0">
                                 {user.ship}
                             </p>
                         </div>
 
-                        {/* QR Section */}
-                        <div className="p-6 flex flex-col items-center bg-white">
-                            <div className="p-3 bg-white border-2 border-gray-100 rounded-xl shadow-sm">
-                                {/* The QR Code Target Div */}
+                        {/* ── QR Code ── */}
+                        <div className="flex flex-col items-center py-5 bg-white">
+                            <div className="p-2.5 border-2 border-gray-100 rounded-xl"
+                                 style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
                                 <div ref={qrRef} id="qrcode"></div>
                             </div>
-                            <p className="text-xs text-gray-400 mt-3 font-mono">ID: {user.id}</p>
+                            <p className="text-xs text-gray-400 mt-2 font-mono m-0">ID: {user.id}</p>
                         </div>
 
-                        {/* Capabilities Icons */}
-                        <div className="bg-gray-50 p-3 border-t border-gray-100">
-                            <div className="grid grid-cols-3 gap-2 divide-x divide-gray-200">
-                                <ActionItem icon="cabin" label="Cabin" sub="Access" />
-                                <ActionItem icon="id" label="Crew" sub="Identity" />
-                                <ActionItem icon="pay" label="Cashless" sub="Pay" />
-                            </div>
+                        {/* ── Capability Chips ── */}
+                        <div className="px-4 pb-4 grid grid-cols-3 gap-2">
+                            <Chip icon="🚪" label="Cabin Access" />
+                            <Chip icon="🪪" label="Crew ID" />
+                            <Chip icon="💳" label="Cashless Pay" />
                         </div>
+
                     </div>
-                    
-                    <p className="text-center text-[10px] text-gray-400 mt-4 max-w-xs mx-auto">
-                        Security Notice: Barcode refreshes automatically. Do not screenshot.
+
+                    {/* ── Security Notice ── */}
+                    <p style={{ textAlign:'center', fontSize:'10px', color:'#9ca3af', marginTop:'8px' }}>
+                        Security Notice: Badge refreshes live. Do not screenshot.
                     </p>
                 </div>
             );
         };
 
-        // Helper Component for Icons
-        const ActionItem = ({ icon, label, sub }) => (
-            <div className="flex flex-col items-center justify-center px-1 text-carnivalBlue">
-                {icon === 'cabin' && (
-                    <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11.536 16.536m-1.414 5.656l-2.828-2.828a1 1 0 010-1.414l5.656-5.656a2.5 2.5 0 113.536 3.536 6 6 0 010 8.486 2.5 2.5 0 01-2.828 0z"></path></svg>
-                )}
-                {icon === 'id' && (
-                    <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
-                )}
-                {icon === 'pay' && (
-                    <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                )}
-                <span className="text-[10px] font-bold text-gray-700 leading-tight text-center">{label}<br/><span className="font-normal text-gray-500">{sub}</span></span>
+        const Chip = ({ icon, label }) => (
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                backgroundColor: '#EFF6FF',
+                borderRadius: '10px',
+                padding: '8px 4px',
+                textAlign: 'center'
+            }}>
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>{icon}</span>
+                <span style={{ fontSize: '9px', fontWeight: '700', color: '#0033A0', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {label}
+                </span>
             </div>
         );
 
-        // Render Application
-        const rootElement = document.getElementById('root');
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(<CrewBadge />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<CrewBadge />);
     </script>
 </body>
 </html>
