@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Digital Crew Card - Carnival</title>
+    
+    <!-- React & Babel via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    
+    <!-- QRCode Generator via CDN -->
+    <script src="https://unpkg.com/qrcode.react@3.1.0/lib/qrcode.react.min.js"></script>
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        carnivalRed: '#E31837',
+                        carnivalBlue: '#0033A0',
+                        carnivalDarkBlue: '#00205B'
+                    },
+                    boxShadow: {
+                        'card': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Base styles for mobile constraints -->
+    <style>
+        body { 
+            background-color: transparent; 
+            margin: 0; 
+            padding: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Ensure the iframe/widget doesn't scroll unnecessarily on mobile */
+        html, body, #root { height: 100%; }
+        
+        .animated-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const QRCode = window.QRCodeCanvas || window.QRCode;
+
+        const CrewBadge = () => {
+            const [user, setUser] = useState({
+                id: 'Loading...',
+                firstName: 'Crew',
+                lastName: 'Member',
+                role: 'Staff',
+                ship: 'Carnival Mardi Gras'
+            });
+
+            const [currentTime, setCurrentTime] = useState(new Date());
+
+            // Update live clock (security feature to prove it's not a screenshot)
+            useEffect(() => {
+                const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Fetch user context from Staffbase Universal Embedder
+            useEffect(() => {
+                const body = document.body;
+                
+                const embeddedId = body.getAttribute('data-user-id') || "CRW-84920";
+                const embeddedFirstName = body.getAttribute('data-first-name') || "Alex";
+                const embeddedLastName = body.getAttribute('data-last-name') || "Smith";
+                const embeddedRole = body.getAttribute('data-role') || "Marine Operations";
+                const embeddedShip = body.getAttribute('data-ship') || "Carnival Celebration";
+
+                setUser({
+                    id: embeddedId,
+                    firstName: embeddedFirstName,
+                    lastName: embeddedLastName,
+                    role: embeddedRole,
+                    ship: embeddedShip
+                });
+            }, []);
+
+            // Format time for security ticker
+            const timeString = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            // The QR code data payload 
+            const qrPayload = JSON.stringify({ uid: user.id, ts: currentTime.getTime() });
+
+            return (
+                <div className="w-full max-w-sm mx-auto h-full flex flex-col justify-center">
+                    
+                    {/* The Digital Badge Card */}
+                    <div className="bg-white rounded-2xl shadow-card overflow-hidden border border-gray-100 relative">
+                        
+                        {/* Security Header Strip (Blue) */}
+                        <div className="bg-carnivalDarkBlue text-white px-4 py-2 flex justify-between items-center text-xs font-semibold">
+                            <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-green-400 animated-pulse"></span>
+                                Active Status
+                            </span>
+                            <span className="font-mono tracking-wider">{timeString}</span>
+                        </div>
+
+                        {/* Top Section: Logo & Photo placeholder */}
+                        <div className="p-5 flex flex-col items-center border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+                            
+                            {/* Carnival Logo Insert */}
+                            <img 
+                                src="https://theinsider.carnivalukgroup.com/wp-content/uploads/2023/11/Carnival-Cruise-Line.png" 
+                                alt="Carnival Logo" 
+                                className="h-10 object-contain mb-4"
+                                onError={(e) => {
+                                    // Fallback text if logo URL fails to load
+                                    e.target.onerror = null;
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'block';
+                                }}
+                            />
+                            {/* Fallback Text Logo */}
+                            <div className="hidden text-xl font-black text-carnivalDarkBlue tracking-tight mb-4">
+                                <span className="text-carnivalRed">CARNIVAL</span> CRUISE LINE
+                            </div>
+
+                            {/* User Info */}
+                            <h1 className="text-2xl font-bold text-gray-900 text-center uppercase tracking-tight">
+                                {user.firstName} {user.lastName}
+                            </h1>
+                            <p className="text-sm text-carnivalBlue font-semibold uppercase tracking-widest mt-1">
+                                {user.role}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 uppercase">
+                                {user.ship}
+                            </p>
+                        </div>
+
+                        {/* Middle Section: QR Code */}
+                        <div className="p-6 flex flex-col items-center bg-white">
+                            <div className="p-3 bg-white border-2 border-gray-100 rounded-xl shadow-sm">
+                                {/* Using the React QRCode component */}
+                                <QRCode 
+                                    value={qrPayload}
+                                    size={160}
+                                    level={"H"}
+                                    includeMargin={false}
+                                    fgColor={"#00205B"}
+                                />
+                            </div>
+                            <p className="text-xs text-gray-400 mt-3 font-mono">
+                                ID: {user.id}
+                            </p>
+                        </div>
+
+                        {/* Bottom Section: Capabilities */}
+                        <div className="bg-gray-50 p-4 border-t border-gray-100">
+                            <div className="grid grid-cols-3 gap-2 divide-x divide-gray-200">
+                                
+                                {/* Capability 1: Cabin */}
+                                <div className="flex flex-col items-center justify-center px-1">
+                                    <svg className="w-5 h-5 text-carnivalBlue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                    </svg>
+                                    <span className="text-[10px] font-semibold text-gray-600 text-center leading-tight">Cabin<br/>Access</span>
+                                </div>
+
+                                {/* Capability 2: Identity */}
+                                <div className="flex flex-col items-center justify-center px-1">
+                                    <svg className="w-5 h-5 text-carnivalBlue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path>
+                                    </svg>
+                                    <span className="text-[10px] font-semibold text-gray-600 text-center leading-tight">Crew<br/>Identity</span>
+                                </div>
+
+                                {/* Capability 3: Payments */}
+                                <div className="flex flex-col items-center justify-center px-1">
+                                    <svg className="w-5 h-5 text-carnivalBlue mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                    </svg>
+                                    <span className="text-[10px] font-semibold text-gray-600 text-center leading-tight">Cashless<br/>Pay</span>
+                                </div>
+                                
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    {/* Security helper text outside card */}
+                    <p className="text-center text-xs text-gray-400 mt-4">
+                        Present this barcode to ship scanners. Do not screenshot.
+                    </p>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CrewBadge />);
+    </script>
+</body>
+</html>
