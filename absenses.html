@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SAP SuccessFactors – Crew Absence Widget</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f8fafc;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .widget-frame {
+    width: 360px;
+    max-width: 100%;
+    background: white;
+    border-radius: 16px;
+    padding: 20px 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    color: #1f2937;
+  }
+
+  .widget-header {
+    padding: 12px 0 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .greeting-label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+
+  .greeting-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .greeting-role {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #374151;
+    margin: 20px 0 10px 0;
+  }
+
+  .absence-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .absence-button {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    padding: 12px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .absence-button:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+  }
+
+  .absence-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .absence-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-personal { background: #dbeafe; color: #1e40af; }
+  .badge-team { background: #dcfce7; color: #166534; }
+  .badge-pending { background: #fef3c7; color: #92400e; }
+
+  .chevron { font-size: 14px; color: #9ca3af; }
+
+  .panel {
+    margin-top: 8px;
+    border-radius: 8px;
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+    padding: 12px;
+    font-size: 12px;
+  }
+
+  .panel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .panel-row:last-child { border-bottom: none; }
+
+  .panel-name {
+    font-weight: 500;
+    color: #111827;
+  }
+
+  .panel-meta {
+    color: #6b7280;
+    font-size: 11px;
+  }
+
+  .status {
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  .status-approved { background: #dcfce7; color: #166534; }
+  .status-pending { background: #fef3c7; color: #92400e; }
+  .status-today { background: #fee2e2; color: #dc2626; }
+
+  .sap-note {
+    margin-top: 16px;
+    padding: 12px;
+    background: linear-gradient(90deg, #eff6ff, #dbeafe);
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+    font-size: 11px;
+    color: #1e3a8a;
+  }
+
+  .sap-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+const MY_ABSENCES = [
+  { name: "Vacation", type: "Annual Leave", dates: "Feb 25-28", status: "Approved" },
+  { name: "Training", type: "Professional Dev", dates: "Mar 5", status: "Approved" },
+];
+
+const TEAM_ABSENCES = [
+  { name: "Maria Gonzalez", type: "Sick Leave", dates: "Feb 24", status: "Approved" },
+  { name: "Tom Chen", type: "Vacation", dates: "Feb 25-27", status: "Approved" },
+];
+
+const PENDING_REQUESTS = [
+  { name: "Lisa Patel", type: "Personal Day", dates: "Feb 26", status: "Pending" },
+  { name: "Carlos Rivera", type: "Doctor Appt", dates: "Feb 25", status: "Pending" },
+];
+
+function App() {
+  const [openPanel, setOpenPanel] = useState(null);
+
+  const toggle = (panel) => {
+    setOpenPanel(openPanel === panel ? null : panel);
+  };
+
+  return (
+    <div className="widget-frame">
+      <div className="widget-header">
+        <div className="greeting-label">Good Morning</div>
+        <div className="greeting-name">Sarah</div>
+        <div className="greeting-role">Guest Services Associate</div>
+      </div>
+
+      <div className="absence-buttons">
+        <div className="absence-button" onClick={() => toggle("my")}>
+          <div className="absence-main">
+            <div className="absence-icon" style={{ background: "#dbeafe", color: "#1e40af" }}>👤</div>
+            <span>My Absences</span>
+          </div>
+          <span className={`badge badge-personal`}>2 Planned</span>
+          <span className="chevron">{openPanel === "my" ? "▲" : "▼"}</span>
+        </div>
+        {openPanel === "my" && (
+          <div className="panel">
+            {MY_ABSENCES.map((a, i) => (
+              <div className="panel-row" key={i}>
+                <div>
+                  <div className="panel-name">{a.name}</div>
+                  <div className="panel-meta">{a.type} · {a.dates}</div>
+                </div>
+                <span className={`status status-${a.status.toLowerCase()}`}>{a.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="absence-button" onClick={() => toggle("team")}>
+          <div className="absence-main">
+            <div className="absence-icon" style={{ background: "#dcfce7", color: "#166534" }}>👥</div>
+            <span>Team Absences</span>
+          </div>
+          <span className={`badge badge-team`}>2 Active</span>
+          <span className="chevron">{openPanel === "team" ? "▲" : "▼"}</span>
+        </div>
+        {openPanel === "team" && (
+          <div className="panel">
+            {TEAM_ABSENCES.map((a, i) => (
+              <div className="panel-row" key={i}>
+                <div>
+                  <div className="panel-name">{a.name}</div>
+                  <div className="panel-meta">{a.type} · {a.dates}</div>
+                </div>
+                <span className={`status status-${a.status.toLowerCase()}`}>{a.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="absence-button" onClick={() => toggle("pending")}>
+          <div className="absence-main">
+            <div className="absence-icon" style={{ background: "#fef3c7", color: "#92400e" }}>⏳</div>
+            <span>Pending Requests</span>
+          </div>
+          <span className={`badge badge-pending`}>2 Waiting</span>
+          <span className="chevron">{openPanel === "pending" ? "▲" : "▼"}</span>
+        </div>
+        {openPanel === "pending" && (
+          <div className="panel">
+            {PENDING_REQUESTS.map((a, i) => (
+              <div className="panel-row" key={i}>
+                <div>
+                  <div className="panel-name">{a.name}</div>
+                  <div className="panel-meta">{a.type} · {a.dates}</div>
+                </div>
+                <span className={`status status-${a.status.toLowerCase()}`}>{a.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="sap-note">
+        <div className="sap-badge">SAP SuccessFactors</div>
+        Live absence data synced from SAP. <strong>Click "Pending Requests" to approve/reject</strong>.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
